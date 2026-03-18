@@ -28,7 +28,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  font-size: 13px;
+  font-size: var(--zoom, 14px);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -119,6 +119,45 @@ body {
 .hdr-uptime {
   font-size: 0.75rem;
   color: var(--txt-dim);
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 0.15rem;
+}
+
+.btn-zoom {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--txt-dim);
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: all 0.15s;
+}
+
+.btn-zoom:hover {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.zoom-level {
+  font-size: 0.6rem;
+  color: var(--txt-dim);
+  min-width: 2.2rem;
+  text-align: center;
+  user-select: none;
 }
 
 .btn-sync {

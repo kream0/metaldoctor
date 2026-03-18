@@ -22,6 +22,27 @@ class MetalDoctor {
   bindControls() {
     document.getElementById('sync-btn').addEventListener('click', () => this.loadAll(true));
 
+    // Zoom controls
+    var self = this;
+    var steps = [10, 11, 12, 13, 14, 15, 16, 18, 20, 22];
+    var zoomIdx = parseInt(localStorage.getItem('md-zoom') || '4', 10); // default 14px
+    this.applyZoom(steps, zoomIdx);
+
+    document.getElementById('zoom-in').addEventListener('click', function () {
+      if (zoomIdx < steps.length - 1) {
+        zoomIdx++;
+        localStorage.setItem('md-zoom', zoomIdx);
+        self.applyZoom(steps, zoomIdx);
+      }
+    });
+    document.getElementById('zoom-out').addEventListener('click', function () {
+      if (zoomIdx > 0) {
+        zoomIdx--;
+        localStorage.setItem('md-zoom', zoomIdx);
+        self.applyZoom(steps, zoomIdx);
+      }
+    });
+
     document.querySelectorAll('.chart-range').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.chart-range').forEach(b => b.classList.remove('active'));
@@ -222,6 +243,9 @@ class MetalDoctor {
 
   highlightLogRows(centerTime, windowMs) {
     var rows = document.getElementById('log-body').children;
+    var firstMatch = null;
+    var lastMatch = null;
+
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
       var ts = row.getAttribute('data-ts');
@@ -229,10 +253,30 @@ class MetalDoctor {
       var t = parseInt(ts, 10);
       var match = Math.abs(t - centerTime) < windowMs;
       row.classList.toggle('chart-highlight', match);
+      if (match) {
+        if (!firstMatch) firstMatch = row;
+        lastMatch = row;
+      }
+    }
 
-      // Auto-scroll first highlighted row into view
-      if (match && !row.previousElementSibling?.classList.contains('chart-highlight')) {
-        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    // Scroll so the entire highlighted group is visible
+    if (firstMatch && lastMatch) {
+      var container = document.querySelector('.log-table-wrap');
+      var cRect = container.getBoundingClientRect();
+      var fRect = firstMatch.getBoundingClientRect();
+      var lRect = lastMatch.getBoundingClientRect();
+
+      var groupTop = fRect.top - cRect.top + container.scrollTop;
+      var groupBot = lRect.bottom - cRect.top + container.scrollTop;
+      var groupH = groupBot - groupTop;
+
+      if (groupH <= cRect.height) {
+        // Group fits — center it in the scroll container
+        var target = groupTop - (cRect.height - groupH) / 2;
+        container.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+      } else {
+        // Group too tall — scroll to the top of the group
+        container.scrollTo({ top: Math.max(0, groupTop - 8), behavior: 'smooth' });
       }
     }
   }
@@ -747,10 +791,104 @@ class MetalDoctor {
       }
 
       tr.appendChild(tdDetail);
+
+      // Hover row → show marker on chart
+      var self = this;
+      tr.addEventListener('mouseenter', function () {
+        var ts = this.getAttribute('data-ts');
+        if (ts) self.drawOverlayMarker(parseInt(ts, 10));
+      });
+      tr.addEventListener('mouseleave', function () {
+        self.clearOverlayMarker();
+      });
+
       frag.appendChild(tr);
     }
 
     tbody.appendChild(frag);
+  }
+
+  drawOverlayMarker(eventTime) {
+    var cs = this.chartState;
+    if (!cs || cs.data.length === 0) return;
+
+    // Skip if event is outside visible chart range
+    if (eventTime < cs.minT || eventTime > cs.maxT) return;
+
+    var overlay = document.getElementById('chart-overlay');
+    var rect = overlay.parentElement.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
+
+    overlay.width = rect.width * dpr;
+    overlay.height = 220 * dpr;
+    overlay.style.width = rect.width + 'px';
+    overlay.style.height = '220px';
+
+    var ctx = overlay.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, cs.W, 220);
+
+    var x = cs.pad.left + ((eventTime - cs.minT) / cs.rangeT) * cs.cW;
+
+    // Vertical highlight line
+    ctx.strokeStyle = 'rgba(74, 222, 128, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, cs.pad.top);
+    ctx.lineTo(x, cs.pad.top + cs.cH);
+    ctx.stroke();
+
+    // Glow band around the line
+    ctx.fillStyle = 'rgba(74, 222, 128, 0.08)';
+    ctx.fillRect(x - 8, cs.pad.top, 16, cs.cH);
+
+    // Diamond marker at the line position on the stability curve
+    // Find nearest stability point to show the value
+    var nearestIdx = 0;
+    var nearestDist = Infinity;
+    for (var i = 0; i < cs.times.length; i++) {
+      var d = Math.abs(cs.times[i] - eventTime);
+      if (d < nearestDist) { nearestDist = d; nearestIdx = i; }
+    }
+
+    var snapY = cs.pad.top + cs.cH - (cs.data[nearestIdx].stabilityIndex / 10) * cs.cH;
+
+    // Diamond
+    ctx.fillStyle = '#4ade80';
+    ctx.beginPath();
+    ctx.moveTo(x, snapY - 5);
+    ctx.lineTo(x + 4, snapY);
+    ctx.lineTo(x, snapY + 5);
+    ctx.lineTo(x - 4, snapY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Time label at bottom
+    var d = new Date(eventTime);
+    var label = String(d.getDate()).padStart(2, '0') + '/' +
+                String(d.getMonth() + 1).padStart(2, '0') + ' ' +
+                String(d.getHours()).padStart(2, '0') + ':' +
+                String(d.getMinutes()).padStart(2, '0');
+
+    ctx.fillStyle = '#4ade80';
+    ctx.font = '9px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x, cs.pad.top + cs.cH + 14);
+  }
+
+  clearOverlayMarker() {
+    var overlay = document.getElementById('chart-overlay');
+    var ctx = overlay.getContext('2d');
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+  }
+
+  applyZoom(steps, idx) {
+    var size = steps[idx];
+    document.documentElement.style.setProperty('--zoom', size + 'px');
+    var pct = Math.round((size / 14) * 100);
+    document.getElementById('zoom-level').textContent = pct + '%';
+    // Redraw chart since canvas doesn't scale with CSS
+    if (this.chartState) this.drawChart();
   }
 
   // ─── Helpers ───
