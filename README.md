@@ -4,6 +4,8 @@ Hardware health monitor that reads Windows Event Viewer data and displays it as 
 
 ![Bun](https://img.shields.io/badge/runtime-Bun-black) ![Platform](https://img.shields.io/badge/platform-Windows%20%2F%20WSL-blue)
 
+![MetalDoctor Dashboard](screenshot.png)
+
 ## What it does
 
 Pulls system events via PowerShell and presents them in a dense, technical UI:
