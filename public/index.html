@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetalDoctor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <header class="hdr">
+    <div class="hdr-left">
+      <span class="hdr-logo">&#x2588;&#x2588; METALDOCTOR</span>
+      <span class="hdr-ver">v1.0</span>
+    </div>
+    <div class="hdr-center">
+      <span class="hdr-machine" id="machine-name">---</span>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-status" id="status-dot">&#x25CF;</span>
+      <span class="hdr-uptime" id="uptime">---</span>
+      <button class="btn-sync" id="sync-btn" title="Force sync from Windows Event Viewer">SYNC</button>
+    </div>
+  </header>
+
+  <!-- Top row: stability gauge + stats -->
+  <section class="row row-top">
+    <div class="panel panel-gauge">
+      <div class="panel-hdr">STABILITY INDEX</div>
+      <div class="gauge-wrap">
+        <div class="gauge-value" id="gauge-value">--</div>
+        <div class="gauge-scale">/10</div>
+        <div class="gauge-bar-track">
+          <div class="gauge-bar-fill" id="gauge-fill"></div>
+        </div>
+        <div class="gauge-delta" id="gauge-delta"></div>
+      </div>
+    </div>
+
+    <div class="panel panel-stats">
+      <div class="panel-hdr">COUNTERS <span class="dim">(all time)</span></div>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-cell stat-critical">
+          <span class="stat-n" id="stat-crashes">-</span>
+          <span class="stat-label">CRASHES</span>
+        </div>
+        <div class="stat-cell stat-hw">
+          <span class="stat-n" id="stat-hardware">-</span>
+          <span class="stat-label">WHEA MCE</span>
+        </div>
+        <div class="stat-cell stat-boot">
+          <span class="stat-n" id="stat-boots">-</span>
+          <span class="stat-label">BOOTS</span>
+        </div>
+        <div class="stat-cell stat-shutdown">
+          <span class="stat-n" id="stat-shutdowns">-</span>
+          <span class="stat-label">SHUTDOWNS</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-apic">
+      <div class="panel-hdr">APIC ERROR MAP</div>
+      <div class="apic-grid" id="apic-grid"></div>
+      <div class="apic-legend" id="apic-legend"></div>
+    </div>
+  </section>
+
+  <!-- Chart -->
+  <section class="row">
+    <div class="panel panel-chart">
+      <div class="panel-hdr">
+        STABILITY TIMELINE
+        <div class="chart-controls">
+          <button class="chart-range active" data-range="all">ALL</button>
+          <button class="chart-range" data-range="7d">7D</button>
+          <button class="chart-range" data-range="3d">3D</button>
+          <button class="chart-range" data-range="24h">24H</button>
+        </div>
+      </div>
+      <div class="chart-area" id="chart-area">
+        <canvas id="chart" height="220"></canvas>
+        <canvas id="chart-overlay" height="220"></canvas>
+        <div class="chart-tooltip" id="chart-tooltip"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Event log -->
+  <section class="row">
+    <div class="panel panel-log">
+      <div class="panel-hdr">
+        EVENT LOG
+        <div class="log-filters" id="log-filters">
+          <button class="log-filter active" data-cat="all">ALL</button>
+          <button class="log-filter active" data-cat="crash">CRASH</button>
+          <button class="log-filter active" data-cat="hardware">MCE</button>
+          <button class="log-filter" data-cat="boot">BOOT</button>
+          <button class="log-filter" data-cat="shutdown">SHUTDOWN</button>
+        </div>
+      </div>
+      <div class="log-table-wrap">
+        <table class="log-table" id="log-table">
+          <thead>
+            <tr>
+              <th class="col-time">TIMESTAMP</th>
+              <th class="col-sev">SEV</th>
+              <th class="col-cat">TYPE</th>
+              <th class="col-title">EVENT</th>
+              <th class="col-detail">DETAIL</th>
+            </tr>
+          </thead>
+          <tbody id="log-body">
+            <tr><td colspan="5" class="log-loading">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer class="ftr">
+    <span>MetalDoctor &mdash; Windows Event Viewer Analysis</span>
+    <span id="last-sync">Last sync: ---</span>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
